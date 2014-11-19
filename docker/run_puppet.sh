@@ -3,10 +3,11 @@
 cd /puppet
 
 # Warning this part is highly experiemental, might not work. Sorry, later. :)
-# if [[ -e ./Puppetfile ]]; then
-# 	echo "Running librarian to handle module dependencies..."
-# 	librarian-puppet install
-# fi
+if [[ -e ./Puppetfile ]]; then
+	echo "Running librarian to handle module dependencies..."
+	librarian-puppet install
+fi
 
-echo "Applying puppet..."
-puppet apply --modulepath modules manifests/local.pp --no-usecacheonfailure --verbose
+echo "Applying puppet..dddd."
+puppet apply --modulepath modules:sbks1/modules manifests/local.pp --no-usecacheonfailure --verbose -d
+
