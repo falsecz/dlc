@@ -6,7 +6,7 @@ DOCKER_DIR="$SCRIPT_DIR/docker"
 PUPPET_DIR="${PUPPET_SOURCE:-$SCRIPT_DIR/puppet}"
 DOCKER_OS="${DOCKER_OS:-ubuntu}"
 DOCKER_OS="$(echo ${DOCKER_OS} | tr '[:upper:]' '[:lower:]')"
-DOCKER_PUPPET_IMAGE="${DOCKER_PUPPET_IMAGE:-puppet-testbase-${DOCKER_OS}}"
+DOCKER_PUPPET_IMAGE="${DOCKER_PUPPET_IMAGE:-puppet-testbase-2${DOCKER_OS}}"
 DOCKER_DNS_IMAGE="locloud-dns-${DOCKER_OS}"
 DOCKER_PID="${DOCKER_DIR}/docker-${DOCKER_OS}.pid"
 # TLD="dlc"
@@ -158,7 +158,10 @@ function getIP() {
 # exit 1
 if [[ "$(getIP)" == "" ]]; then
 	echo "poustim"
-	DOCKER_PS=$(docker run -d -h "$HOSTNAME" --dns $DNSIP --name "$HOSTNAME" -p 22 -t -v $PUPPET_DIR:/puppet -v $DOCKER_DIR:/docker $DOCKER_PUPPET_IMAGE /usr/sbin/sshd -D)
+	DOCKER_PS=$(docker run -d -h "$HOSTNAME" --dns $DNSIP --name "$HOSTNAME" -p 22 -t -v $PUPPET_DIR:/puppet -v $DOCKER_DIR:/docker $DOCKER_PUPPET_IMAGE)
+	# echo docker run -d -h "$HOSTNAME" --dns $DNSIP --name "$HOSTNAME" -p 22 -t -v $PUPPET_DIR:/puppet -v $DOCKER_DIR:/docker $DOCKER_PUPPET_IMAGE /usr/sbin/sshd -D
+
+	# exit 1
 	sleep 1
 
 	IP=$(getIP)
