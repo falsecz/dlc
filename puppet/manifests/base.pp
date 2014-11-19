@@ -12,15 +12,6 @@
 # }
 
 
-node "mrdka.cz" {
-
-	package { [ "git", "mc", "nginx", "htop", "curl", "psmisc"]:
-		ensure => installed
-	}
-
-}
-
-
 
 node "node1.dlc" {
 

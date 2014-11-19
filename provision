@@ -131,7 +131,10 @@ echo "poustim dns"
 DNSIP=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' $DNS_CONTAINER_NAME 2> /dev/null || true)
 if [[ ! "$DNSIP" ]]; then
 	echo poutim dns
-	docker run -d  -t --name $DNS_CONTAINER_NAME locloud-dns-ubuntu
+	docker run -d -p 5353:53/udp  -p 5353:53 -t --name $DNS_CONTAINER_NAME locloud-dns-ubuntu
+	docker exec $DNS_CONTAINER_NAME bash -c "echo server=8.8.8.8 > /etc/dnsmasq.d/global-dns"
+	docker exec $DNS_CONTAINER_NAME service dnsmasq restart
+
 	sleep 1
 fi
 
@@ -148,7 +151,6 @@ function getIP() {
 # echo --$(getIP)--
 
 
-# docker exec $DNS_CONTAINER_NAME bash -c "echo server=8.8.8.8 > /etc/dnsmasq.d/global-dns"
 # docker exec $DNS_CONTAINER_NAME bash -c "echo host-record=$HOSTNAME.$TLD,$IP > /etc/dnsmasq.d/$HOSTNAME"
 # docker exec $DNS_CONTAINER_NAME service dnsmasq restart
 
