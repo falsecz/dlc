@@ -192,7 +192,7 @@ echo $HOSTNAME bezi
 
 # DOCKER_PS=$(cat $DOCKER_PID || true;)
 # echo DOCKER_PS
-exit 0
+# exit 0
 # If already created and still running. Stop the container to create a new one.
 if [[ "$(dockerRunning "$DOCKER_PS")" ]]; then
 	echo " "
