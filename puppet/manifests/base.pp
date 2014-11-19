@@ -22,7 +22,11 @@ node "mrdka.cz" {
 
 
 
-node "node1.local" {
+node "node1.dlc" {
+
+	service {  "nginx":
+		ensure => "running"
+	}
 
 	package { [ "git", "nginx"]:
 		ensure => installed
@@ -31,7 +35,7 @@ node "node1.local" {
 }
 
 
-node "node2.local" {
+node "node2.dlc" {
 
 	package { [ "htop","curl"]:
 		ensure => installed

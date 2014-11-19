@@ -7,15 +7,23 @@ PUPPET_DIR="${PUPPET_SOURCE:-$SCRIPT_DIR/puppet}"
 DOCKER_OS="${DOCKER_OS:-ubuntu}"
 DOCKER_OS="$(echo ${DOCKER_OS} | tr '[:upper:]' '[:lower:]')"
 DOCKER_PUPPET_IMAGE="${DOCKER_PUPPET_IMAGE:-puppet-testbase-${DOCKER_OS}}"
+DOCKER_DNS_IMAGE="locloud-dns-${DOCKER_OS}"
 DOCKER_PID="${DOCKER_DIR}/docker-${DOCKER_OS}.pid"
+# TLD="dlc"
 
-
+echo $DOCKER_DNS_IMAGE
 if [[  $# == 0  ]]; then
 	echo Missing hostname
 	exit 1
 fi
 HOSTNAME=$1
 
+
+
+if [[ ! $HOSTNAME =~ .\.dlc$ ]]; then
+	echo Hostname must end with .dlc
+	exit 1
+fi
 
 # Support setting a special puppet dir. This is mainly to support running in Vagrant.
 if [[ -e /puppet ]]; then
@@ -24,6 +32,10 @@ fi
 
 function puppetImage() {
 	echo "$(imagePulled $DOCKER_PUPPET_IMAGE)"
+}
+
+function dnsImage() {
+	echo "$(imagePulled $DOCKER_DNS_IMAGE)"
 }
 
 function imagePulled() {
@@ -86,24 +98,78 @@ if [[ ! "$(puppetImage)" ]]; then
 	exit 1
 fi
 
+
+echo "ss "
+
+
+if [[ ! "$(dnsImage)" ]]; then
+	echo " "
+	echo "Need to build dns image (${DOCKER_DNS_IMAGE}) for puppet testing!"
+	echo "After this is done once, testing will run faster. :)"
+	echo " "
+	DOCKERFILE="${DOCKER_DIR}/Dockerfile"
+	configureBaseImage "${DOCKER_OS}" "${DOCKERFILE}.dns.template" "${DOCKERFILE}"
+	echo "Building ${DOCKER_OS} image..."
+	docker build -t="$DOCKER_DNS_IMAGE" .
+	rm ${DOCKERFILE}
+fi
+
+
+if [[ ! "$(puppetImage)" ]]; then
+	echo "Building the puppet image has failed! Aborting."
+	exit 1
+fi
+
+if [[ ! "$(dnsImage)" ]]; then
+	echo "Building the dns image has failed! Aborting."
+	exit 1
+fi
+
+DNS_CONTAINER_NAME="dns-mrdka"
+
+echo "poustim dns"
+#docker run -d  -t --name DNS_CONTAINER_NAME locloud-dns-ubuntu
+# docker exec $DNS_CONTAINER_NAME ls /etc/dnsmasq.d/
+DNSIP=`docker inspect --format '{{ .NetworkSettings.IPAddress }}' $DNS_CONTAINER_NAME 2> /dev/null`
+
 function getIP() {
 	docker inspect --format '{{ .NetworkSettings.IPAddress }}' "$HOSTNAME" 2> /dev/null
 }
+# exit 0
 
 # IPADRESS=$(getIP)
 # echo --$(getIP)--
 
 
+# docker exec $DNS_CONTAINER_NAME bash -c "echo server=8.8.8.8 > /etc/dnsmasq.d/global-dns"
+# docker exec $DNS_CONTAINER_NAME bash -c "echo host-record=$HOSTNAME.$TLD,$IP > /etc/dnsmasq.d/$HOSTNAME"
+# docker exec $DNS_CONTAINER_NAME service dnsmasq restart
 
 # exit 1
 if [[ "$(getIP)" == "" ]]; then
 	echo "poustim"
-	DOCKER_PS=$(docker run -d -h "$HOSTNAME" --name "$HOSTNAME" -p 22 -t -v $PUPPET_DIR:/puppet -v $DOCKER_DIR:/docker $DOCKER_PUPPET_IMAGE /usr/sbin/sshd -D)
+	DOCKER_PS=$(docker run -d -h "$HOSTNAME" --dns $DNSIP --name "$HOSTNAME" -p 22 -t -v $PUPPET_DIR:/puppet -v $DOCKER_DIR:/docker $DOCKER_PUPPET_IMAGE /usr/sbin/sshd -D)
+	sleep 1
+
+	IP=$(getIP)
+	echo "Provision $IP"
+
+	# aktualizuju dns
+	docker exec $DNS_CONTAINER_NAME bash -c "echo server=8.8.8.8 > /etc/dnsmasq.d/global-dns"
+	docker exec $DNS_CONTAINER_NAME bash -c "echo host-record=$HOSTNAME,$IP > /etc/dnsmasq.d/$HOSTNAME"
+	docker exec $DNS_CONTAINER_NAME service dnsmasq restart
 
 	# ssh  -i ssh_key -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@$IPADDRESS -p 22 "/docker/run_puppet.sh"
 	#TODO chytrejs
-	sleep 1
+	# sleep 1
 fi
+
+# IP=$(getIP)
+# echo "Provision $IP"
+#
+#
+# docker exec $DNS_CONTAINER_NAME bash -c "echo host-record=$HOSTNAME,$IP > /etc/dnsmasq.d/$HOSTNAME"
+# docker exec $DNS_CONTAINER_NAME service dnsmasq restart
 
 
 IP=$(getIP)
@@ -111,14 +177,14 @@ echo "Provision $IP"
 #
 ssh  -i ssh_key -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@$IP -p 22 "/docker/run_puppet.sh"
 
-echo bezi
+echo $HOSTNAME bezi
 
 	# echo "poustim"
 	# DOCKER_PS=$(docker run -d -h "$HOSTNAME" --name "$HOSTNAME" -p 22 -t -v $PUPPET_DIR:/puppet -v $DOCKER_DIR:/docker $DOCKER_PUPPET_IMAGE /usr/sbin/sshd -D)
 	# dockerR
 # fi
 
-docker ps
+# docker ps
 
 # DOCKER_PS=$(docker run -d -h "$HOSTNAME" --name "$HOSTNAME" -p 22 -t -v $PUPPET_DIR:/puppet -v $DOCKER_DIR:/docker $DOCKER_PUPPET_IMAGE /usr/sbin/sshd -D)
 
@@ -126,7 +192,7 @@ docker ps
 
 # DOCKER_PS=$(cat $DOCKER_PID || true;)
 # echo DOCKER_PS
-exit 1
+exit 0
 # If already created and still running. Stop the container to create a new one.
 if [[ "$(dockerRunning "$DOCKER_PS")" ]]; then
 	echo " "
