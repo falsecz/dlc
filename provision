@@ -10,6 +10,7 @@ DOCKER_PUPPET_IMAGE="${DOCKER_PUPPET_IMAGE:-puppet-testbase-${DOCKER_OS}}"
 DOCKER_DNS_IMAGE="locloud-dns-${DOCKER_OS}"
 DOCKER_PID="${DOCKER_DIR}/docker-${DOCKER_OS}.pid"
 # TLD="dlc"
+DNSPORT=5353
 
 echo $DOCKER_DNS_IMAGE
 if [[  $# == 0  ]]; then
@@ -131,7 +132,7 @@ echo "poustim dns"
 DNSIP=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' $DNS_CONTAINER_NAME 2> /dev/null || true)
 if [[ ! "$DNSIP" ]]; then
 	echo poutim dns
-	docker run -d -p 5353:53/udp  -p 5353:53 -t --name $DNS_CONTAINER_NAME locloud-dns-ubuntu
+	docker run -d -p $DNSPORT:53/udp  -p $DNSPORT:53 -t --name $DNS_CONTAINER_NAME locloud-dns-ubuntu
 	docker exec $DNS_CONTAINER_NAME bash -c "echo server=8.8.8.8 > /etc/dnsmasq.d/global-dns"
 	docker exec $DNS_CONTAINER_NAME service dnsmasq restart
 
