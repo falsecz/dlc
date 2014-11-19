@@ -98,7 +98,7 @@ function getIP() {
 # exit 1
 if [[ "$(getIP)" == "" ]]; then
 	echo "poustim"
-	DOCKER_PS=$(docker run -d -h "$HOSTNAME" --label "locloud" --name "$HOSTNAME" -p 22 -t -v $PUPPET_DIR:/puppet -v $DOCKER_DIR:/docker $DOCKER_PUPPET_IMAGE /usr/sbin/sshd -D)
+	DOCKER_PS=$(docker run -d -h "$HOSTNAME" --name "$HOSTNAME" -p 22 -t -v $PUPPET_DIR:/puppet -v $DOCKER_DIR:/docker $DOCKER_PUPPET_IMAGE /usr/sbin/sshd -D)
 
 	# ssh  -i ssh_key -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@$IPADDRESS -p 22 "/docker/run_puppet.sh"
 	#TODO chytrejs
