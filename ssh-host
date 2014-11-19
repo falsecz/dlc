@@ -1,0 +1,46 @@
+#!/bin/bash -eu
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+DOCKER_DIR="$SCRIPT_DIR/docker"
+DOCKER_OS="${DOCKER_OS:-ubuntu}"
+
+cd $DOCKER_DIR
+
+
+if [[  $# == 0  ]]; then
+	echo Missing hostname
+	exit 1
+fi
+HOSTNAME=$1
+
+function getIP() {
+	docker inspect --format '{{ .NetworkSettings.IPAddress }}' "$HOSTNAME" 2> /dev/null
+}
+
+if [[ "$(getIP)" == "" ]]; then
+	echo "Cannot get ip for $HOSTNAME, is running?"
+	exit 1
+fi
+
+echo Connecting to $(getIP)
+
+ssh -q -i ssh_key -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@$(getIP) -p 22
+
+
+# SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+# DOCKER_DIR="$SCRIPT_DIR/docker"
+# DOCKER_OS="${DOCKER_OS:-ubuntu}"
+
+# cd $DOCKER_DIR
+#
+# function dockerRunning() {
+# 	local DOCKER_PS="$1"
+# 	if [[ "$(docker ps | grep $(cat docker.pid))" ]]; then
+# 		echo "true"
+# 	fi
+# }
+#
+# DOCKER_PS=$(cat $DOCKER_DIR/docker-$DOCKER_OS.pid || true;)
+# SSH_PORT=$(docker port $DOCKER_PS 22 | cut -f2 -d ':')
+# ssh -q -i ssh_key -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@192.168.59.103 -p $SSH_PORT
