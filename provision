@@ -128,7 +128,14 @@ fi
 DNS_CONTAINER_NAME="dns-mrdka"
 
 echo "poustim dns"
-#docker run -d  -t --name DNS_CONTAINER_NAME locloud-dns-ubuntu
+DNSIP=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' $DNS_CONTAINER_NAME 2> /dev/null || true)
+if [[ ! "$DNSIP" ]]; then
+	echo poutim dns
+	docker run -d  -t --name $DNS_CONTAINER_NAME locloud-dns-ubuntu
+	sleep 1
+fi
+
+
 # docker exec $DNS_CONTAINER_NAME ls /etc/dnsmasq.d/
 DNSIP=`docker inspect --format '{{ .NetworkSettings.IPAddress }}' $DNS_CONTAINER_NAME 2> /dev/null`
 
@@ -192,7 +199,7 @@ echo $HOSTNAME bezi
 
 # DOCKER_PS=$(cat $DOCKER_PID || true;)
 # echo DOCKER_PS
-# exit 0
+exit 0
 # If already created and still running. Stop the container to create a new one.
 if [[ "$(dockerRunning "$DOCKER_PS")" ]]; then
 	echo " "
