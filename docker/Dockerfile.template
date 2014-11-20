@@ -1,10 +1,10 @@
 # VERSION               0.1
 # DOCKER-VERSION        0.4
 
-FROM    DOCKER_OS
+FROM    ubuntu:14.04
 
 # Update system and packages
-ADD     system_packages_DOCKER_OS.sh /root/system_packages.sh
+ADD     system_packages_ubuntu_14.04.sh /root/system_packages.sh
 RUN     /root/system_packages.sh
 
 # Add configuration for SSH daemon

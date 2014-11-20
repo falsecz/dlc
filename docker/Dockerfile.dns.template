@@ -4,8 +4,8 @@
 FROM    DOCKER_OS
 
 # Update system and packages
-ADD     system_packages_DOCKER_OS.sh /root/system_packages.sh
-RUN     /root/system_packages.sh
+# ADD     system_packages_DOCKER_OS.sh /root/system_packages.sh
+# RUN     /root/system_packages.sh
 
 # Add configuration for SSH daemon
 ADD     ssh_host_rsa_key /etc/ssh/ssh_host_rsa_key

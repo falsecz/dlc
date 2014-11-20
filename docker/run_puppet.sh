@@ -9,5 +9,5 @@ if [[ -e ./Puppetfile ]]; then
 fi
 
 echo "Applying puppet..dddd."
-puppet apply --modulepath modules:sbks1/modules manifests/local.pp --no-usecacheonfailure --verbose -d
+puppet apply --modulepath $1 $2 --no-usecacheonfailure --verbose -d
 
