@@ -126,8 +126,9 @@ if [[ "$(getIP)" == "" ]]; then
 	echo "-----> starting host $HOST"
 	# echo $DLCROOT
 	# MOUNTS=$(echo "$MODULEPATH" | tr ":", "\n" | awk -v base="$DLCROOT" '{print "-v "base"/"$1":/puppet/"$1}' | tr "\n" " ")
-
-	DOCKER_PS=$(docker run -d -h "$HOST" --dns $DNSIP --name "$HOST" -p 22 -t  -v $DLCROOT:/puppet -v $DOCKER_DIR:/docker $DOCKER_BASE_IMAGE)
+# -v $DOCKER_DIR:/docker
+	# echo docker run -d -h "$HOST" --dns $DNSIP --name "$HOST" -p 22 -t  -v $DLCROOT:/puppet  $DOCKER_BASE_IMAGE
+	DOCKER_PS=$(docker run -d -h "$HOST" --dns $DNSIP --name "$HOST" -p 22 -t  -v $DLCROOT:/puppet $DOCKER_BASE_IMAGE)
 
 	sleep 1
 
