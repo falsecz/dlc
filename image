@@ -1,0 +1,157 @@
+#!/bin/bash -eu
+
+DOCKER_DIR="$SCRIPT_DIR/docker"
+
+
+function puppetImage() {
+	echo "$(imagePulled $DOCKER_BASE_IMAGE)"
+}
+
+function dnsImage() {
+	echo "$(imagePulled $DOCKER_DNS_IMAGE)"
+}
+
+function imagePulled() {
+	local IMAGE_NAME=$1
+	echo "$(docker images | { grep $IMAGE_NAME || true; })"
+}
+
+function dockerVersion() {
+	echo "$(docker version | grep Server | cut -d ":" -f2 | tr -d ' ')"
+}
+
+function dockerRunning() {
+	local DOCKER_PS="$1"
+	if [[ "$(docker ps | grep $DOCKER_PS)" ]]; then
+		echo "true"
+	fi
+}
+
+function configureBaseImage() {
+	local DOCKER_OS="$1"
+	local DOCKER_TEMPLATE="$2"
+	local DOCKER_TARGET="$3"
+	local DOCKER_PACKAGE_SCRIPT=`echo $DOCKER_OS | sed  's/:/_/'`
+	sed "s/DOCKER_OS/${DOCKER_OS}/" ${DOCKER_TEMPLATE} > ${DOCKER_TARGET}.1
+	sed "s/DOCKER_PACKAGE_SCRIPT/${DOCKER_PACKAGE_SCRIPT}/" ${DOCKER_TARGET}.1 > ${DOCKER_TARGET}
+}
+
+
+cd $DOCKER_DIR
+
+# Make sure the key is private, if not ssh will not use it
+chmod og-rwx ssh_*
+
+# echo " "
+
+
+# Work around for security constraint in docker. Will be fixed later with groups.
+# sudo chmod 777 /var/run/docker.sock
+
+if [[ ! "$(puppetImage)" ]]; then
+	echo " "
+	echo "Need to build base image (${DOCKER_BASE_IMAGE}) for puppet testing!"
+	echo "After this is done once, testing will run faster. :)"
+	echo " "
+	DOCKERFILE="${DOCKER_DIR}/Dockerfile"
+	configureBaseImage "${DOCKER_OS}" "${DOCKERFILE}.template" "${DOCKERFILE}"
+	echo "Building ${DOCKER_OS} image..."
+	docker build -t="$DOCKER_BASE_IMAGE" .
+	rm ${DOCKERFILE}
+	rm ${DOCKERFILE}.1
+
+fi
+
+if [[ ! "$(puppetImage)" ]]; then
+	echo "Building the puppet image has failed! Aborting."
+	exit 1
+fi
+
+
+# exit 1
+
+
+if [[ ! "$(dnsImage)" ]]; then
+	echo " "
+	echo "Need to build dns image (${DOCKER_DNS_IMAGE}) for puppet testing!"
+	echo "After this is done once, testing will run faster. :)"
+	echo " "
+	DOCKERFILE="${DOCKER_DIR}/Dockerfile"
+	configureBaseImage "${DOCKER_OS}" "${DOCKERFILE}.dns.template" "${DOCKERFILE}"
+	echo "Building ${DOCKER_OS} image..."
+	docker build -t="$DOCKER_DNS_IMAGE" .
+	rm ${DOCKERFILE}
+fi
+
+
+if [[ ! "$(puppetImage)" ]]; then
+	echo "Building the puppet image has failed! Aborting."
+	exit 1
+fi
+
+if [[ ! "$(dnsImage)" ]]; then
+	echo "Building the dns image has failed! Aborting."
+	exit 1
+fi
+
+
+DNSIP=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' $DNS_CONTAINER_NAME 2> /dev/null || true)
+if [[ ! "$DNSIP" ]]; then
+	echo "-----> Starting dns container"
+	docker run -d -p $DNSPORT:53/udp  -p $DNSPORT:53 -t --name $DNS_CONTAINER_NAME $DOCKER_DNS_IMAGE
+	docker exec $DNS_CONTAINER_NAME bash -c "echo server=8.8.8.8 > /etc/dnsmasq.d/global-dns"
+	docker exec $DNS_CONTAINER_NAME service dnsmasq restart
+
+	sleep 1
+fi
+
+
+# docker exec $DNS_CONTAINER_NAME ls /etc/dnsmasq.d/
+DNSIP=`docker inspect --format '{{ .NetworkSettings.IPAddress }}' $DNS_CONTAINER_NAME 2> /dev/null`
+
+function getIP() {
+	docker inspect --format '{{ .NetworkSettings.IPAddress }}' "$HOST" 2> /dev/null
+}
+# exit 0
+
+# IPADRESS=$(getIP)
+# echo --$(getIP)--
+
+
+# docker exec $DNS_CONTAINER_NAME bash -c "echo host-record=$HOSTNAME.$TLD,$IP > /etc/dnsmasq.d/$HOSTNAME"
+# docker exec $DNS_CONTAINER_NAME service dnsmasq restart
+
+# exit 1
+if [[ "$(getIP)" == "" ]]; then
+	echo "-----> starting host $HOST"
+	# echo $DLCROOT
+	# MOUNTS=$(echo "$MODULEPATH" | tr ":", "\n" | awk -v base="$DLCROOT" '{print "-v "base"/"$1":/puppet/"$1}' | tr "\n" " ")
+
+	DOCKER_PS=$(docker run -d -h "$HOST" --dns $DNSIP --name "$HOST" -p 22 -t  -v $DLCROOT:/puppet -v $DOCKER_DIR:/docker $DOCKER_BASE_IMAGE)
+
+	sleep 1
+
+	IP=$(getIP)
+	echo "-----> updating dns server"
+
+	docker exec $DNS_CONTAINER_NAME bash -c "echo server=8.8.8.8 > /etc/dnsmasq.d/global-dns"
+	docker exec $DNS_CONTAINER_NAME bash -c "echo host-record=$HOST,$IP > /etc/dnsmasq.d/$HOST"
+	docker exec $DNS_CONTAINER_NAME service dnsmasq restart
+
+fi
+
+IP=$(getIP)
+
+if [[ $1 == "provision" ]]; then
+	echo "-----> provision host $HOST"
+	ssh -i ssh_key -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@$IP -p 22 "/docker/run_puppet.sh $MODULEPATH $MANIFEST"
+	echo $HOST done
+fi
+
+
+
+if [[ $1 == "ssh" ]]; then
+	echo "-----> ssh to $IP"
+	ssh -q -i ssh_key -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@$IP -p 22
+	echo "-----> success"
+fi

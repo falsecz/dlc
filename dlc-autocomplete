@@ -1,0 +1,32 @@
+#!/bin/bash -eu
+
+_dlc_ps() {
+	local box_list=$(dlc ps)
+	COMPREPLY=($(compgen -W "${box_list}" -- ${cur}))
+}
+
+_dlc() {
+	cur="${COMP_WORDS[COMP_CWORD]}"
+	prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+	commands="provision halt ps ssh destroy init reset"
+
+	if [ $COMP_CWORD == 1 ]
+	then
+		COMPREPLY=($(compgen -W "${commands}" -- ${cur}))
+		return 0
+	fi
+
+	if [ $COMP_CWORD == 2 ]; then
+		case "$prev" in
+			"provision"|"destroy"|"ssh")
+				_dlc_ps
+				return 0
+				;;
+			*)
+			;;
+		esac
+	fi
+}
+complete -F _dlc dlc
+

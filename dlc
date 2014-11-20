@@ -1,0 +1,176 @@
+#!/bin/bash -eu
+
+
+if [[ ! -z $(readlink $0) ]]; then
+	LINKBASE=$( dirname "${BASH_SOURCE[0]}" )
+	SCRIPT_DIR=$(dirname $(readlink $0))
+	SCRIPT_DIR="$( cd "$LINKBASE/$SCRIPT_DIR" && pwd )"
+else
+	SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+fi
+export SCRIPT_DIR
+
+
+DOCKER_PATH=$({ which docker || true; })
+if [[ ! $DOCKER_PATH ]]; then
+	echo " "
+	echo "ERROR: Could not find Docker. Did you install? See README and http://docker.io for instructions."
+	echo " "
+	exit 1
+fi
+
+$SCRIPT_DIR/route.sh
+
+
+
+
+usage()
+{
+cat << EOF
+usage: dlc [command] hostname[.dlc]
+
+COMMANDS:
+   init        Create new Dlcfile
+   provision   Provision host
+   destroy     Destroy host
+   ssh         SSH to running host
+   ps          list running host
+   reset       kill all instances and remove images
+EOF
+}
+
+
+upsearch () {
+  slashes=${PWD//[^\/]/}
+  directory="$PWD"
+  for (( n=${#slashes}; n>0; --n ))
+  do
+    test -e "$directory/$1" && echo "$directory/$1" && return
+    directory="$directory/.."
+  done
+}
+
+## Dlc file
+DLCLOADED=
+DLCFILE=$(upsearch Dlcfile)
+if [[ $DLCFILE ]]; then
+	# echo loaduju
+	source $DLCFILE
+	# echo $MODULEPATH
+	# exit 1
+	export MODULEPATH
+	export MANIFEST
+
+	DLCLOADED=1
+	DLCROOT="$( cd "$( dirname "$DLCFILE" )" && pwd )"
+
+	DOCKER_DIR="$SCRIPT_DIR/docker"
+	DOCKER_OS="ubuntu:14.04"
+	DOCKER_BASE_IMAGE="dlc-base-system"
+	DOCKER_DNS_IMAGE="dlc-base-dns"
+	DOCKER_DIR="$SCRIPT_DIR/docker"
+	DNS_CONTAINER_NAME="dlc-dns.dlc"
+	DNSPORT="5353"
+	export DOCKER_BASE_IMAGE DOCKER_DNS_IMAGE DOCKER_DIR DOCKER_OS DNS_CONTAINER_NAME DNSPORT DLCROOT HOST
+	# export
+	# echo $DLCROOT
+	# $DOCKER_DIR
+
+
+fi
+
+requiredlc () {
+	if [[ -z $DLCLOADED  ]]; then
+		echo Missing Dlcfile. run \`dlc init\` to create it.
+		exit 1
+	fi
+}
+
+
+## Opt parse
+COMMAND=
+HOST=
+if [[  "$#" -gt "0"  ]]; then
+	COMMAND=$1
+fi
+
+
+if [[ "$COMMAND" == 'ps' ||  "$COMMAND" == 'init' || "$COMMAND" == 'reset' ]]; then
+	HOST="NONE"
+fi
+
+if [[  $# -gt 1  ]]; then
+	HOST=$2
+	if [[ ! $HOST =~ .\.dlc$ ]]; then
+		echo Hostname must end with .dlc
+		exit 1
+	fi
+fi
+
+ARG=
+if [[  $# == 3  ]]; then
+	ARG=$3
+fi
+
+if [[ -z $COMMAND ]] || [[ -z $HOST ]]
+then
+     usage
+     exit 1
+fi
+
+# echo sds
+case $COMMAND in
+	"init")
+		if [[ -f Dlcfile ]]; then
+			echo Dlcfile already exits!
+			exit 1
+		fi
+		echo "MODULEPATH=modules:sbks1/modules" > Dlcfile
+		echo "MANIFEST=manifests/local.pp" >> Dlcfile
+
+
+
+		echo Dlcfile created
+		;;
+
+	"ps")
+		docker ps |   awk '{print $NF}' | grep ".dlc$"
+		;;
+	"ssh")
+		requiredlc
+		# echo "prp"
+		$SCRIPT_DIR/image ssh
+		;;
+
+	"provision")
+		requiredlc
+		if [[ $ARG == "-f" ]]; then
+			echo "-----> force used, destroying $HOST"
+			docker kill $HOST
+			docker rm $HOST
+		fi
+		$SCRIPT_DIR/image provision
+		;;
+	"reset")
+		echo "-----> removing running instances"
+		docker ps -a |   awk '{print $NF}' | grep ".dlc$" | xargs docker kill
+		docker ps -a |   awk '{print $NF}' | grep ".dlc$" | xargs docker rm
+
+		echo "-----> removing dns image"
+
+		# docker ps -a | grep  $DOCKER_DNS_IMAGE | awk '{print $1}' | xargs docker rm
+		# echo $DOCKER_DNS_IMAGE
+
+		docker rmi -f $DOCKER_DNS_IMAGE || true
+		echo "-----> removing base image"
+
+		# docker ps -a | grep  $DOCKER_BASE_IMAGE | awk '{print $1}' | xargs docker rm
+		docker rmi -f $DOCKER_BASE_IMAGE || true
+		;;
+	"destroy")
+		# requiredlc
+		echo "kill & rm $HOST"
+		docker kill $HOST
+		docker rm $HOST
+		;;
+esac
