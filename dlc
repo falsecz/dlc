@@ -52,6 +52,9 @@ upsearch () {
   done
 }
 
+DOCKER_BASE_IMAGE="dlc-base-system"
+DOCKER_DNS_IMAGE="dlc-base-dns"
+
 ## Dlc file
 DLCLOADED=
 DLCFILE=$(upsearch Dlcfile)
@@ -68,8 +71,6 @@ if [[ $DLCFILE ]]; then
 
 	DOCKER_DIR="$SCRIPT_DIR/docker"
 	DOCKER_OS="ubuntu:14.04"
-	DOCKER_BASE_IMAGE="dlc-base-system"
-	DOCKER_DNS_IMAGE="dlc-base-dns"
 	DOCKER_DIR="$SCRIPT_DIR/docker"
 	DNS_CONTAINER_NAME="dlc-dns.dlc"
 	DNSPORT="5353"
