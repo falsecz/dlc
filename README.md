@@ -1,29 +1,27 @@
-Simple setup for testing Puppet scripts in isolation on a isolated "machine" with Docker. See http://docker.io for how it works with Linux Containers.
+##### CLI tool for test provisioning local cloud with puppet in docker.
 
-# Requirements
+## Requirements
 Install Docker according to instructions on http://docker.io . Clone this repository or export contents to a new one you intend to work on Puppet scripts in, and you should be all set.
 
 - linux or osx (install boot2docker)
 
-# Installation
-## OSX
+## Installation
+#### OSX
 ```
 brew tap falsecz/homebrew-misc
 brew install dlc
 ```
-## Linux
+#### Linux
 clone this repository and add dlc command to path
 
 
-# Usage
-dlc init
+## Usage
+```
+# dlc init
 dlc provision hostname.[dlc]
+``
 
-
-
-
-
-#Features
+##Features
 - auto setup routes to boot2docker network (osx)
 - auto build base image
 - auto build/start dnsmasq image (shared for all instances)
