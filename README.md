@@ -3,63 +3,30 @@ Simple setup for testing Puppet scripts in isolation on a isolated "machine" wit
 # Requirements
 Install Docker according to instructions on http://docker.io . Clone this repository or export contents to a new one you intend to work on Puppet scripts in, and you should be all set.
 
-If you're not on Ubuntu you'll want to check out the Vagrant section. :)
+- linux or osx (install boot2docker)
 
-# Running
-The script should be self contained so just run ```./test-docker.sh``` to test the Puppet scripts that you have in ```./puppet/manifests``` . Add modules to ```./puppet/modules``` .
-
-When you run the script the second time, the container will be re-used so only changes in the Puppet scripts should be applied.
-
-## Outside Puppet sources
-The default setup uses the included ```./puppet``` folder. If you'd like to test some other sources you can point to them by doing ```export PUPPET_SOURCE=/home/user/source/mypuppet```. 
-
-Do this on your host machine and it will be used by the scripts if you are running in Linux, and picked up by Vagrant (Vagrant will map the dir to ```/puppet```).
-
-## Choosing the OS
-Setting the envionment variable ```DOCKER_OS``` allows you to choose Ubuntu or CentOS (Defaults to CentOS).
-
-eg. ```DOCKER_OS=UBUNTU ./test-docker.sh```
-
-WARNING: Currently, the provided Puppet scripts only runs correctly on CentOS
-
-Watch what you are typing, because the value is not error checked. If you wan't to add another OS, all you need to do is add a new ```docker/system_packages_osname.sh``` to install what you need. For now the other scripts like ```run_puppet.sh``` is not OS specific.
-
-# How?
-This setup does a few things:
-- Install necessary packages for puppet and ssh
-- Compile an updated image as a one off to save time later
-- Launch a SSH daemon to enable running puppet and debugging
-- Run Puppet scripts automatically
-
-Docker containers are low overhead and fast to start up, so the real delay you experience comes from what the puppet scripts does. You only reset (see below) once in a while if there are new versions to Puppet etc.
-
-# Forcing a reset
-To make sure you start a new machine from scratch and apply all the changes you will have to kill the running container in docker. Find and kill like this:
-
+# Installation
+## OSX
 ```
-vagrant@precise64:~/puppet-docker$ docker ps
-ID                  IMAGE                    COMMAND             CREATED             STATUS              PORTS
-c3a9324bad55        puppet-testbase-centos:latest   /usr/sbin/sshd -D   6 minutes ago       Up 6 minutes        49153->22           
-vagrant@precise64:~/puppet-docker$ docker kill c3a9324bad55
+brew tap falsecz/homebrew-misc
+brew install dlc
 ```
+## Linux
+clone this repository and add dlc command to path
 
-# Vagrant???
-Docker only runs on Ubuntu at the moment. So if you'd like to run this on anything else you can use Vagrant to launch a Ubuntu VM (like I do on OS X). The first launch will be slow, but after the first launch Vagrant shouldn't get in your way. The folder you start up in is mapped to ```/vagrant``` inside the box so the sources and scripts will be triggered there. Login and do:
 
-```
-vagrant up (wait for everything to finish)
-vagrant reload
-vagrant ssh
-cd /vargant
-./test-docker.sh (repeat after each change)
-```
+# Usage
+dlc init
+dlc provision hostname.[dlc]
 
-# Reducing test time
-When you run the first time, a Docker image is built called puppet-testbase-(centos|ubuntu). The next time it is run, this will be skipped and the testing will be a lot faster. If you do any changes to the bash scripts or the Dockerfile you will need to delete it to re-trigger a build:
 
-```
-vagrant@precise64:~/puppet-docker$ docker rmi puppet-testbase-centos
-```
 
-# More
-Just let me know if I can help with anything. And have a look at Docker, it's some truly kick ass technology.
+
+
+#Features
+- auto setup routes to boot2docker network (osx)
+- auto build base image
+- auto build/start dnsmasq image (shared for all instances)
+- support Puppetfile (librarian-puppet)
+
+
