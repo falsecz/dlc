@@ -135,7 +135,7 @@ if [[ "$(getIP)" == "" ]]; then
 	IP=$(getIP)
 	echo "-----> updating dns server"
 
-	docker exec $DNS_CONTAINER_NAME bash -c "echo server=8.8.8.8 > /etc/dnsmasq.d/global-dns"
+	docker exec $DNS_CONTAINER_NAME bash -c "echo server=$NAMESERVER > /etc/dnsmasq.d/global-dns"
 	docker exec $DNS_CONTAINER_NAME bash -c "echo host-record=$HOST,$IP > /etc/dnsmasq.d/$HOST"
 	docker exec $DNS_CONTAINER_NAME service dnsmasq restart
 

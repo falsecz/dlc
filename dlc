@@ -59,12 +59,15 @@ DOCKER_DNS_IMAGE="dlc-base-dns"
 DLCLOADED=
 DLCFILE=$(upsearch Dlcfile)
 if [[ $DLCFILE ]]; then
+
+	NAMESERVER=8.8.8.8
 	# echo loaduju
 	source $DLCFILE
 	# echo $MODULEPATH
 	# exit 1
 	export MODULEPATH
 	export MANIFEST
+	export NAMESERVER
 
 	DLCLOADED=1
 	DLCROOT="$( cd "$( dirname "$DLCFILE" )" && pwd )"
